@@ -58,7 +58,6 @@ public:
      */
     NonVol& operator=(T other)
     {
-        Serial.println("Assignment operator going on here...");
         this->value = other;
         EEPROM.put(address, other);
         return *this;

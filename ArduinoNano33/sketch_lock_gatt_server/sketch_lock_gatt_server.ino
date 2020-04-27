@@ -15,6 +15,7 @@
 #include <ArduinoBLE.h>
 #endif // #if USE_BLE
 #include "NonVol.h"
+#include "InputHelper.h"
 
 /**
  * Enumerations and constants
@@ -29,7 +30,7 @@ enum Pins
     Connected = 4,
 
     // Switches and buttons
-    LogBuggin = 5,
+    LogButton = 5,
     ManualOverrideSwitch = 6,
 };
 
@@ -54,9 +55,75 @@ BLEDescriptor statusDesc("2901", "Provides the current status string.");
 
 #endif // #if USE_BLE
 
+/**
+ * @brief   Handler for when the log button is pressed.
+ *
+ * @param   pin             The input pin triggering the handler.
+ * @param   state           The new state of the input.
+ * @param   durationMs      The duration of the press/release in milliseconds.
+ */
+void logButtonHandler(const int pin, const int state, const long durationMs)
+{
+    if (pin == Pins::LogButton)
+    {
+        Serial.print("Log button has been ");
+        Serial.println(state ? "pressed." : "released.");
+        if (!state)
+        {
+            Serial.print("Button was pressed for ");
+            Serial.print(durationMs);
+            Serial.println(" milliseconds.");
+        }
+        digitalWrite(Pins::Connected, state);
+    }
+    else
+    {
+        Serial.print("Incorrect button being handled - ");
+        Serial.print(pin);
+        Serial.print(" is not ");
+        Serial.println(Pins::LogButton);
+    }
+}
+
+/**
+ * @brief   Handler for when the manual override switch is toggled.
+ *
+ * @param   pin             The input pin triggering the handler.
+ * @param   state           The new state of the switch.
+ * @param   durationMs      The duration of the press/release in milliseconds.
+ */
+void manOverrideHandler(const int pin, const int state, const long durationMs)
+{
+    if (pin == Pins::ManualOverrideSwitch)
+    {
+        Serial.print("Manual override switch has been toggled ");
+        Serial.println(state ? "on" : "off.");
+        Serial.print("Switch was ");
+        Serial.print(state ? "off for " : "on for ");
+        Serial.print(durationMs);
+        Serial.println(" milliseconds.");
+
+        digitalWrite(Pins::Locked, !state);
+        digitalWrite(Pins::Unlocked, state);
+    }
+    else
+    {
+        Serial.print("Incorrect button being handled - ");
+        Serial.print(pin);
+        Serial.print(" is not ");
+        Serial.println(Pins::ManualOverrideSwitch);
+    }
+}
+
+
+// The input helper for handling log button presses.
+InputHelper logButton(Pins::LogButton, logButtonHandler);
+// The input helper for handling manual override switch toggles.
+InputHelper manOverrideSwitch(Pins::ManualOverrideSwitch, manOverrideHandler);
+
 // The starting secret code to open the lock
 // @TODO add means of updating this value to a personalised value
-const char *secretCode = "abc123";
+const char *secretCode = "BLE-Tutor";
 
 /**
  * Sets up the Arduino, run once before carrying out the loop() function.
@@ -66,17 +133,29 @@ void setup() {
      * BLE related set up code
      */
 
-    // Set up the serial comms port
+    // Start the serial communications, then wait for it to initialise
     Serial.begin(9600);
-
-    // Wait for the serial port to start up
     while (!Serial)
     {
-
+        delay(1);
     }
+
+    // Set up the GPIO direction and initial states
+    pinMode(Pins::Locked, OUTPUT);
+    pinMode(Pins::Unlocked, OUTPUT);
+    pinMode(Pins::Connected, OUTPUT);
+    digitalWrite(Pins::Locked, HIGH);
+    digitalWrite(Pins::Unlocked, LOW);
+    digitalWrite(Pins::Connected, LOW);
+
+    Serial.println("Starting the GATT server...");
+#if USE_BLE
+
+#endif // #if USE_BLE
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  logButton.poll();
+  manOverrideSwitch.poll();
 }
