@@ -16,6 +16,7 @@
 #endif // #if USE_BLE
 #include "NonVol.h"
 #include "InputHelper.h"
+#include "OutputHelper.h"
 
 /**
  * Enumerations and constants
@@ -55,6 +56,13 @@ BLEDescriptor statusDesc("2901", "Provides the current status string.");
 
 #endif // #if USE_BLE
 
+// The output helper for writing to and reading from the locked LED pin.
+OutputHelper lockedLed(Pins::Locked, HIGH);
+// The output helper for writing to and reading from the unlocked LED pin.
+OutputHelper unlockedLed(Pins::Unlocked);
+// The output helper for writing to and reading from the connected LED pin.
+OutputHelper connectedLed(Pins::Connected);
+
 /**
  * @brief   Handler for when the log button is pressed.
  *
@@ -74,7 +82,7 @@ void logButtonHandler(const int pin, const int state, const long durationMs)
             Serial.print(durationMs);
             Serial.println(" milliseconds.");
         }
-        digitalWrite(Pins::Connected, state);
+        connectedLed = state;
     }
     else
     {
@@ -103,8 +111,8 @@ void manOverrideHandler(const int pin, const int state, const long durationMs)
         Serial.print(durationMs);
         Serial.println(" milliseconds.");
 
-        digitalWrite(Pins::Locked, !state);
-        digitalWrite(Pins::Unlocked, state);
+        lockedLed = !state;
+        unlockedLed = state;
     }
     else
     {
@@ -126,7 +134,8 @@ InputHelper manOverrideSwitch(Pins::ManualOverrideSwitch, manOverrideHandler);
 const char *secretCode = "BLE-Tutor";
 
 /**
- * Sets up the Arduino, run once before carrying out the loop() function.
+ * @brief   Sets up the Arduino, run once before carrying out the loop()
+ *          function.
  */
 void setup() {
     /**
@@ -140,20 +149,15 @@ void setup() {
         delay(1);
     }
 
-    // Set up the GPIO direction and initial states
-    pinMode(Pins::Locked, OUTPUT);
-    pinMode(Pins::Unlocked, OUTPUT);
-    pinMode(Pins::Connected, OUTPUT);
-    digitalWrite(Pins::Locked, HIGH);
-    digitalWrite(Pins::Unlocked, LOW);
-    digitalWrite(Pins::Connected, LOW);
-
     Serial.println("Starting the GATT server...");
 #if USE_BLE
 
 #endif // #if USE_BLE
 }
 
+/**
+ * @brief   Loop function carried out indefinitely after set up.
+ */
 void loop() {
   // put your main code here, to run repeatedly:
   logButton.poll();
