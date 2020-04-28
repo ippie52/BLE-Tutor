@@ -7,7 +7,7 @@
  * @author  Kris Dunning (ippie52@gmail.com)
  * @date    2020
  */
-
+#pragma once
 
 // Provides the function pointer type definition for the input state handler.
 typedef void InputToggleCallback(
@@ -15,7 +15,6 @@ typedef void InputToggleCallback(
     const int newState,
     const long lastChange
 );
-
 
 /**
  * Class used to make handling input signals easier.
@@ -27,7 +26,7 @@ public:
      * @brief   Constructor - Takes the pin and the state handler.
      *
      * @param   pin         The input pin to monitor.
-     * @param   callback    The callback handler for state changes.
+     * @param   callback    The static callback handler for state changes.
      */
     InputHelper(const int pin, InputToggleCallback *callback)
     : pin(pin)
@@ -52,12 +51,25 @@ public:
         const int b = digitalRead(pin);
         if ((a == b) && (a != lastState))
         {
-            if (callback != nullptr)
-            {
-                callback(pin, a, currentTimeMs - lastChangeMs);
-            }
+            signalCallback(pin, a, currentTimeMs - lastChangeMs);
+
             lastState = a;
             lastChangeMs = currentTimeMs;
+        }
+    }
+
+    /**
+     * @brief   Signals the callback handler
+     *
+     * @param   pin         The input pin
+     * @param   state       The new state of the input
+     * @param   duration    The duration of the last state (in milliseconds)
+     */
+    virtual void signalCallback(const int pin, const int state, const long duration)
+    {
+        if (callback != nullptr)
+        {
+            callback(pin, state, duration);
         }
     }
 
@@ -72,7 +84,7 @@ public:
     }
 
 
-private:
+protected:
     /// @brief  The input pin to monitor
     const int pin;
     /// @brief  The callback for handling state changes
@@ -82,3 +94,4 @@ private:
     /// @brief  The last state change time in milliseconds
     long lastChangeMs;
 };
+

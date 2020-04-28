@@ -34,6 +34,13 @@ public:
 
     }
 
+    /**
+     * @brief   Signals the callback handler
+     *
+     * @param   pin         The input pin
+     * @param   state       The new state of the input
+     * @param   duration    The duration of the last state (in milliseconds)
+     */
     virtual void signalCallback(const int pin, const int state, const long duration)
     {
         if (object != nullptr && memberFunc != nullptr)
