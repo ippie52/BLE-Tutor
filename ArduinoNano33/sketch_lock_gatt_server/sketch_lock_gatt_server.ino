@@ -9,12 +9,7 @@
  *              Kris Dunning (ippie52@gmail.com) 2020
  */
 
-#define USE_BLE (0)
-
-#if USE_BLE
 #include <ArduinoBLE.h>
-#endif // #if USE_BLE
-
 #include "InputHelper.h"
 #include "OutputHelper.h"
 #include "Lock.h"
@@ -22,6 +17,9 @@
 /**
  * Enumerations and constants
  */
+
+#define LOCKED_STRING       "Locked"
+#define UNLOCKED_STRING     "Unlocked"
 
 // Pin mappings
 enum Pins
@@ -40,14 +38,13 @@ enum Pins
  * Forward declarations
  */
 
-void logButtonHandler(const int pin, const int state, const long durationMs);
-void lockStateChange(const bool state);
+static void logButtonHandler(const int pin, const int state, const long durationMs);
+static void lockStateChange(const bool state);
 
 /**
  * Global variables
  */
 
-#if USE_BLE
 // The main service for the lock
 BLEService lockService("F001");
 
@@ -55,14 +52,13 @@ BLEService lockService("F001");
 // @TODO Provide some READ and Identify options
 // @TODO Explain the UUIDs, read/write etc and the length
 BLECharacteristic unlockChar("F002", BLEWrite, 20);
-BLECharacteristic statusChar("F003", BLENotify, 20);
+BLECharacteristic statusChar("F003", BLENotify | BLERead, 20);
 
 // The descriptors for the characteristics
 // @TODO explain
 BLEDescriptor unlockDesc("2901", "Accepts unlock codes.");
 BLEDescriptor statusDesc("2901", "Provides the current status string.");
 
-#endif // #if USE_BLE
 
 // The starting secret code to open the lock
 // @TODO add means of updating this value to a personalised value
@@ -116,7 +112,6 @@ static void logButtonHandler(const int pin, const int state, const long duration
     }
 }
 
-#if USE_BLE
 /**
  * @brief   Handler for data written to the unlock characteristic.
  *
@@ -126,7 +121,7 @@ static void logButtonHandler(const int pin, const int state, const long duration
 static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteristic)
 {
     Serial.print("Message received from: ");
-    Serial.println(centra.address());
+    Serial.println(central.address());
 
     char* message = (char *)characteristic.value();
     const int len = characteristic.valueLength();
@@ -139,7 +134,30 @@ static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteri
     }
     characteristic.writeValue((byte)0);
 }
-#endif // #if USE_BLE
+
+/**
+ * @brief   Handles a new connection from a central device
+ *
+ * @param   central     The central device information
+ */
+static void connectedHandler(BLEDevice central)
+{
+  Serial.print("Client connected: ");
+  Serial.println(central.address());
+  connectedLed = HIGH;
+}
+
+/**
+ * @brief   Handles disconnection from a central device
+ *
+ * @param   central     The central device information
+ */
+static void disconnectedHandler(BLEDevice central)
+{
+  Serial.print("Client disconnected: ");
+  Serial.println(central.address());
+  connectedLed = LOW;
+}
 
 /**
  * @brief   Lock state change handler function. Reports any changes to the
@@ -147,11 +165,9 @@ static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteri
  *
  * @param   state   The current state of the lock
  */
-void lockStateChange(const bool state)
+static void lockStateChange(const bool state)
 {
-#if USE_BLE
-    statusChar.setValue(state ? "Locked" : "Unlocked");
-#endif // #if USE_BLE
+    statusChar.setValue(state ? LOCKED_STRING : UNLOCKED_STRING);
 }
 
 /**
@@ -170,8 +186,16 @@ void setup() {
         delay(1);
     }
 
-    Serial.print("Starting the GATT server.");
-#if USE_BLE
+    Serial.println("Starting the GATT server.");
+
+    if (!BLE.begin())
+    {
+        Serial.println("Failed to start BLE");
+        while (true)
+        {
+            delay(100);
+        }
+    }
 
     // Configure the BLE server
     BLE.setDeviceName("BLE-Tutor Device");
@@ -182,14 +206,25 @@ void setup() {
     statusChar.addDescriptor(statusDesc);
 
     unlockChar.setEventHandler(BLEWritten, unlockMessageWritten);
+    statusChar.setValue(LOCKED_STRING);
 
-#endif // #if USE_BLE
+    lockService.addCharacteristic(unlockChar);
+    lockService.addCharacteristic(statusChar);
+
+    BLE.setEventHandler(BLEConnected, connectedHandler);
+    BLE.setEventHandler(BLEDisconnected, disconnectedHandler);
+
+    BLE.addService(lockService);
+    BLE.advertise();
+    Serial.print("Server stated on: ");
+    Serial.println(BLE.address());
 }
 
 /**
  * @brief   Loop function carried out indefinitely after set up.
  */
 void loop() {
-  logButton.poll();
-  lock.poll();
+    BLE.poll();
+    logButton.poll();
+    lock.poll();
 }
