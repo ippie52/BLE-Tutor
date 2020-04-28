@@ -160,6 +160,28 @@ static void disconnectedHandler(BLEDevice central)
 }
 
 /**
+ * @brief   This handler *should* be called when the BLENotify characteristic is
+ *          subscribed to. Sadly, this does not appear to be working, and some
+ *          digging shows this pull request from 2017:
+ *          https://github.com/arduino/ArduinoCore-arc32/pull/532/commits
+ */
+static void subscribedCallback(BLEDevice central, BLECharacteristic characteristic)
+{
+    Serial.println(String("Subscribed by ") + central.address());
+}
+
+/**
+ * @brief   This handler *should* be called when the BLENotify characteristic is
+ *          unsubscribed. Sadly, this does not appear to be working, and some
+ *          digging shows this pull request from 2017:
+ *          https://github.com/arduino/ArduinoCore-arc32/pull/532/commits
+ */
+static void unsubscribedCallback(BLEDevice central, BLECharacteristic characteristic)
+{
+    Serial.println(String("Unsubscribed by ") + central.address());
+}
+
+/**
  * @brief   Lock state change handler function. Reports any changes to the
  *          locked state characteristic.
  *
@@ -206,6 +228,10 @@ void setup() {
     statusChar.addDescriptor(statusDesc);
 
     unlockChar.setEventHandler(BLEWritten, unlockMessageWritten);
+    // Sadly these won't ever be called, but they're here for completeness.
+    unlockChar.setEventHandler(BLESubscribed, subscribedCallback);
+    unlockChar.setEventHandler(BLEUnsubscribed, unsubscribedCallback);
+
     statusChar.setValue(LOCKED_STRING);
 
     lockService.addCharacteristic(unlockChar);
