@@ -6,6 +6,7 @@
  * @author  Kris Dunning (ippie52@gmail.com)
  * @date    2020
  */
+#pragma once
 
 /**
  * Class used to make handling output signals easier.
