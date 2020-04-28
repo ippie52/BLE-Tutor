@@ -14,9 +14,10 @@
 #if USE_BLE
 #include <ArduinoBLE.h>
 #endif // #if USE_BLE
-#include "NonVol.h"
+
 #include "InputHelper.h"
 #include "OutputHelper.h"
+#include "Lock.h"
 
 /**
  * Enumerations and constants
@@ -34,6 +35,12 @@ enum Pins
     LogButton = 5,
     ManualOverrideSwitch = 6,
 };
+
+/**
+ * Forward declarations
+ */
+
+void logButtonHandler(const int pin, const int state, const long durationMs);
 
 /**
  * Global variables
@@ -56,12 +63,27 @@ BLEDescriptor statusDesc("2901", "Provides the current status string.");
 
 #endif // #if USE_BLE
 
+// The starting secret code to open the lock
+// @TODO add means of updating this value to a personalised value
+const char *secretCode = "BLE-Tutor";
+
 // The output helper for writing to and reading from the locked LED pin.
 OutputHelper lockedLed(Pins::Locked, HIGH);
 // The output helper for writing to and reading from the unlocked LED pin.
 OutputHelper unlockedLed(Pins::Unlocked);
 // The output helper for writing to and reading from the connected LED pin.
 OutputHelper connectedLed(Pins::Connected);
+
+// The input helper for handling log button presses.
+InputHelper logButton(Pins::LogButton, logButtonHandler);
+
+// The lock item
+Lock lock(Pins::Locked, Pins::Unlocked, Pins::ManualOverrideSwitch);
+
+/**
+ * Functions
+ */
+
 
 /**
  * @brief   Handler for when the log button is pressed.
@@ -70,7 +92,7 @@ OutputHelper connectedLed(Pins::Connected);
  * @param   state           The new state of the input.
  * @param   durationMs      The duration of the press/release in milliseconds.
  */
-void logButtonHandler(const int pin, const int state, const long durationMs)
+static void logButtonHandler(const int pin, const int state, const long durationMs)
 {
     if (pin == Pins::LogButton)
     {
@@ -94,46 +116,6 @@ void logButtonHandler(const int pin, const int state, const long durationMs)
 }
 
 /**
- * @brief   Handler for when the manual override switch is toggled.
- *
- * @param   pin             The input pin triggering the handler.
- * @param   state           The new state of the switch.
- * @param   durationMs      The duration of the press/release in milliseconds.
- */
-void manOverrideHandler(const int pin, const int state, const long durationMs)
-{
-    if (pin == Pins::ManualOverrideSwitch)
-    {
-        Serial.print("Manual override switch has been toggled ");
-        Serial.println(state ? "on" : "off.");
-        Serial.print("Switch was ");
-        Serial.print(state ? "off for " : "on for ");
-        Serial.print(durationMs);
-        Serial.println(" milliseconds.");
-
-        lockedLed = !state;
-        unlockedLed = state;
-    }
-    else
-    {
-        Serial.print("Incorrect button being handled - ");
-        Serial.print(pin);
-        Serial.print(" is not ");
-        Serial.println(Pins::ManualOverrideSwitch);
-    }
-}
-
-
-// The input helper for handling log button presses.
-InputHelper logButton(Pins::LogButton, logButtonHandler);
-// The input helper for handling manual override switch toggles.
-InputHelper manOverrideSwitch(Pins::ManualOverrideSwitch, manOverrideHandler);
-
-// The starting secret code to open the lock
-// @TODO add means of updating this value to a personalised value
-const char *secretCode = "BLE-Tutor";
-
-/**
  * @brief   Sets up the Arduino, run once before carrying out the loop()
  *          function.
  */
@@ -149,8 +131,18 @@ void setup() {
         delay(1);
     }
 
-    Serial.println("Starting the GATT server...");
+    Serial.print("Starting the GATT server.");
 #if USE_BLE
+
+    // Configure the BLE server
+    BLE.setDeviceName("BLE-Tutor Device");
+    BLE.setLocalName("BLE-Tutor Arduino");
+
+    // Add descriptors to the characteristics
+    unlockChar.addDescriptor(unlockDesc);
+    statusChar.addDescriptor(statusDesc);
+
+    unlockChar.setEventHandler(BLEWritten, unlockMessageWritten);
 
 #endif // #if USE_BLE
 }
@@ -159,7 +151,6 @@ void setup() {
  * @brief   Loop function carried out indefinitely after set up.
  */
 void loop() {
-  // put your main code here, to run repeatedly:
   logButton.poll();
-  manOverrideSwitch.poll();
+  lock.poll();
 }
