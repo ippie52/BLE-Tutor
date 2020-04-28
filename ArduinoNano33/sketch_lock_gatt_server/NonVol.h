@@ -8,7 +8,14 @@
  * @date    2020
  */
 
+// @TODO Have a better means of identifying whether EEPROM available.
+#if defined(ARDUINO_ARCH_SAMD)
+#error TODO - Find alternative means of writing to and from SRAM
+#include <FlashAsEEPROM.h>
+
+#else
 #include <EEPROM.h>
+#endif // Board check
 
 /**
  * Class to wrap around the EEPROM get/put functions, to make reading and
