@@ -41,6 +41,7 @@ enum Pins
  */
 
 void logButtonHandler(const int pin, const int state, const long durationMs);
+void lockStateChange(const bool state);
 
 /**
  * Global variables
@@ -78,7 +79,7 @@ OutputHelper connectedLed(Pins::Connected);
 InputHelper logButton(Pins::LogButton, logButtonHandler);
 
 // The lock item
-Lock lock(Pins::Locked, Pins::Unlocked, Pins::ManualOverrideSwitch);
+Lock lock(Pins::Locked, Pins::Unlocked, Pins::ManualOverrideSwitch, lockStateChange);
 
 /**
  * Functions
@@ -113,6 +114,44 @@ static void logButtonHandler(const int pin, const int state, const long duration
         Serial.print(" is not ");
         Serial.println(Pins::LogButton);
     }
+}
+
+#if USE_BLE
+/**
+ * @brief   Handler for data written to the unlock characteristic.
+ *
+ * @param   central         The central BLE device information
+ * @param   characteristic  The characteristic attached to this handler
+ */
+static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteristic)
+{
+    Serial.print("Message received from: ");
+    Serial.println(centra.address());
+
+    char* message = (char *)characteristic.value();
+    const int len = characteristic.valueLength();
+    message[len] = '\0';
+
+    if (strcmp(message, secretCode) == 0)
+    {
+        Serial.println("Valid code received - unlocking");
+        lock.unlock();
+    }
+    characteristic.writeValue((byte)0);
+}
+#endif // #if USE_BLE
+
+/**
+ * @brief   Lock state change handler function. Reports any changes to the
+ *          locked state characteristic.
+ *
+ * @param   state   The current state of the lock
+ */
+void lockStateChange(const bool state)
+{
+#if USE_BLE
+    statusChar.setValue(state ? "Locked" : "Unlocked");
+#endif // #if USE_BLE
 }
 
 /**

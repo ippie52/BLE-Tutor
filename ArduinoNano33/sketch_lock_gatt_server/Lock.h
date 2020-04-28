@@ -13,6 +13,11 @@
 #include "ClassInputHelper.h"
 
 /**
+ * @brief  Callback function pointer definition for when the lock state changes
+ */
+typedef void (*LockStateChangedCallback)(const bool state);
+
+/**
  * Class used to monitor and update the state of the lock
  */
 class Lock
@@ -24,13 +29,15 @@ public:
      * @param   locked      The pin to output the locked state
      * @param   unlocked    The pin to output the unlocked state
      * @param   override    The pin to monitor for manual override
+     * @param   callback    The callback handler for the lock state change
      * @param   duration    The lock duration in milliseconds (default 4 seconds)
      */
-    Lock(const int locked, const int unlocked, const int override, const int duration = 4000)
+    Lock(const int locked, const int unlocked, const int override, LockStateChangedCallback callback, const int duration = 4000)
     : lockedLed(locked, HIGH)
     , unlockedLed(unlocked)
-    , unlockedDurationMs(duration)
     , overridePin(override, this, &Lock::manualOverrideHandler)
+    , callback(callback)
+    , unlockedDurationMs(duration)
     , lastUnlocked(0L)
     , locked(true)
     {
@@ -46,6 +53,10 @@ public:
         unlockedLed = HIGH;
         lockedLed = LOW;
         locked = false;
+        if (callback != nullptr)
+        {
+            callback(locked);
+        }
     }
 
     /**
@@ -58,6 +69,10 @@ public:
         unlockedLed = LOW;
         lockedLed = HIGH;
         locked = true;
+        if (callback != nullptr)
+        {
+            callback(locked);
+        }
     }
 
     /**
@@ -106,10 +121,12 @@ private:
     OutputHelper lockedLed;
     /// @brief  The unlocked LED output
     OutputHelper unlockedLed;
-    /// @brief  The duration (in milliseconds for unlocking signals)
-    const int unlockedDurationMs;
     /// @brief  The manual override input
     ClassInputHelper<Lock> overridePin;
+    /// @brief  The callback handler for state changes
+    LockStateChangedCallback callback;
+    /// @brief  The duration (in milliseconds for unlocking signals)
+    const int unlockedDurationMs;
     /// @brief  The time (in milliseconds since start) when last unlocked
     long lastUnlocked;
     /// @brief  The current lock state

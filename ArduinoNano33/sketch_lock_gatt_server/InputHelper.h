@@ -10,7 +10,7 @@
 #pragma once
 
 // Provides the function pointer type definition for the input state handler.
-typedef void InputToggleCallback(
+typedef void (*InputToggleCallback)(
     const int pin,
     const int newState,
     const long lastChange
@@ -28,7 +28,7 @@ public:
      * @param   pin         The input pin to monitor.
      * @param   callback    The static callback handler for state changes.
      */
-    InputHelper(const int pin, InputToggleCallback *callback)
+    InputHelper(const int pin, InputToggleCallback callback)
     : pin(pin)
     , callback(callback)
     , lastState(digitalRead(pin))
@@ -88,7 +88,7 @@ protected:
     /// @brief  The input pin to monitor
     const int pin;
     /// @brief  The callback for handling state changes
-    InputToggleCallback *callback;
+    InputToggleCallback callback;
     /// @brief  The last state of this input.
     int lastState;
     /// @brief  The last state change time in milliseconds
