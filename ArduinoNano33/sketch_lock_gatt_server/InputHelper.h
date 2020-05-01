@@ -2,7 +2,8 @@
  * @file    InputHelper.h
  *
  * @brief   Provides the InputHelper class, used to handle input de-bounce and
- *          other common and tedious things.
+ *          other common and tedious things. These objects are to be used on
+ *          static/unbound functions, rather than class methods.
  *
  * @author  Kris Dunning (ippie52@gmail.com)
  * @date    2020
@@ -25,7 +26,7 @@ typedef void (*InputTimeoutCallback)(const int pin, const long durationMs);
 class InputHelper
 {
 public:
-    /**
+    /***************************************************************************
      * @brief   Constructor - Takes the pin and the state handler.
      *
      * @param   pin                 The input pin to monitor.
@@ -52,7 +53,7 @@ public:
         pinMode(pin, INPUT);
     }
 
-    /**
+    /***************************************************************************
      * @brief   Polls event, to be called in the loop() function. Checks the
      *          current state of the input and signals the toggle callback if
      *          the state has changed since the last poll.
@@ -89,14 +90,18 @@ public:
         }
     }
 
-    /**
+    /***************************************************************************
      * @brief   Signals the toggle callback handler
      *
      * @param   pin         The input pin
      * @param   state       The new state of the input
      * @param   duration    The duration of the last state (in milliseconds)
      */
-    virtual void signalToggleCallback(const int pin, const int state, const long duration)
+    virtual void signalToggleCallback(
+        const int pin,
+        const int state,
+        const long duration
+    )
     {
         if (toggle_callback != nullptr)
         {
@@ -104,7 +109,7 @@ public:
         }
     }
 
-    /**
+    /***************************************************************************
      * @brief   Signals the time-out callback handler
      *
      * @param   pin         The input pin that triggered this event
@@ -118,7 +123,7 @@ public:
         }
     }
 
-    /**
+    /***************************************************************************
      * @brief   Gets the current state as an integer.
      *
      * @return  The current state of the input.

@@ -1,5 +1,7 @@
 /**
- * Lock GATT server
+ * @file sketch_lock_gatt_server.ino
+ *
+ * @brief Arduino sketch to control a BLE peripheral lock using a central device
  *
  * This sketch emulates a lock with BLE connectivity, with the aim of exploring
  * a BLE peripheral server capabilities, including services, characteristics and
@@ -13,7 +15,8 @@
  * This Arduino sketch requires either an Arduino with BLE capabilities
  * or a BLE adaptor board.
  *
- *              Kris Dunning (ippie52@gmail.com) 2020
+ * @author  Kris Dunning (ippie52@gmail.com)
+ * @data    2020
  */
 
 // This uses the ArduinoBLE header, which needs to be installed as an additional
@@ -195,7 +198,7 @@ static void logMessageHandler(const bool full)
         // Send the full log
         for(int i = 0; i < MAX_UNLOCK_TIMES; i++)
         {
-            const long lastUnlock = lock.get_unlock_time(i);
+            const long lastUnlock = lock.getUnlockTime(i);
             if (lastUnlock != 0)
             {
                 const long delta = millis() - lastUnlock;
@@ -226,7 +229,7 @@ static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteri
     const int len = characteristic.valueLength();
     message[len] = '\0';
 
-    if (lock.unlock_with_message(message))
+    if (lock.unlockWithMessage(message))
     {
         Serial.println("Valid code received - unlocking");
     }
@@ -384,7 +387,7 @@ void setup() {
     Lock::initialise();
 
     // Set the current lock state and log state
-    lockStateChange(lock.get_lock_state());
+    lockStateChange(lock.getLockState());
     logChar.writeValue("No log yet.");
 
     // Display any start up information

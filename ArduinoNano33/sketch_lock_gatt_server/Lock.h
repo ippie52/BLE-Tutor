@@ -19,6 +19,10 @@
 #include "Common.h"
 #include "OutputHelper.h"
 
+/**
+ * Constants and definitions
+ */
+
 /// @brief  The number of unlock events to store
 #define MAX_UNLOCK_TIMES        (10)
 
@@ -39,6 +43,10 @@ static const int SECRET_CODE_MAX_LENGTH = MAX_PACKET_LENGTH;
 
 /// @brief  The default string to unlock the device
 #define DEFAULT_SECRET_CODE     "BLE-Tutor"
+
+/**
+ * Structures, type definitions and enumerations
+ */
 
 /*******************************************************************************
  * @brief   Provides all of the available lock states
@@ -61,9 +69,6 @@ struct Secret
     char code[SECRET_CODE_MAX_LENGTH];
 };
 
-/// @brief  Create a storage variable for reading and writing the secret code.
-FlashStorage(secret_code, Secret);
-
 /**
  * @brief  Callback function pointer definition for when the lock state changes
  */
@@ -75,20 +80,28 @@ typedef void (*LockStateChangedCallback)(const LockState state);
 typedef void (*LogMessageCallback)(const bool full);
 
 /**
+ * Globals
+ */
+/// @brief  Create a storage variable for reading and writing the secret code.
+FlashStorage(secret_code, Secret);
+
+
+/**
  * Class used to monitor and update the state of the lock
  */
 class Lock
 {
 public:
     /***************************************************************************
-     * @brief   Constructor - Sets up the lock and the relevant inputs and outputs
+     * @brief   Constructor - Sets up the lock and the relevant inputs and
+     *          outputs
      *
      * @param   lockLed         The pin to output the locked state
      * @param   unlockLed       The pin to output the unlocked state
      * @param   override        The pin to monitor for manual override
      * @param   mpPin           The multi-purpose pin input
      * @param   stateCallback   The callback handler for the lock state change
-     * @param   duration        The lock duration in milliseconds (default 4 seconds)
+     * @param   duration        The lock duration in milliseconds
      */
     Lock(
         const int lockLed,
@@ -97,7 +110,8 @@ public:
         const int mpPin,
         LockStateChangedCallback stateCallback,
         LogMessageCallback logCallback,
-        const int duration = DEFAULT_UNLOCK_TIME_MS)
+        const int duration = DEFAULT_UNLOCK_TIME_MS
+    )
     : lockedLed(lockLed, HIGH)
     , unlockedLed(unlockLed)
     , overridePin(override, this, &Lock::manualOverrideHandler, nullptr, 0L)
@@ -117,7 +131,7 @@ public:
      *
      * @param   message     The secret message to check
      */
-    bool unlock_with_message(const char *message)
+    bool unlockWithMessage(const char *message)
     {
         Secret secret = secret_code.read();
         if ((lockState & LockState::Locked) != 0)
@@ -137,7 +151,7 @@ public:
                 "\""
             );
         }
-        return !is_locked();
+        return !isLocked();
     }
 
     /***************************************************************************
@@ -161,7 +175,7 @@ public:
         overridePin.poll();
         multipurposePin.poll();
         // If not manually overridden, check for the time-out.
-        if (!overridePin && !is_locked())
+        if (!overridePin && !isLocked())
         {
             const long delta = millis() - lastUnlocked;
             if (delta >= unlockedDurationMs)
@@ -176,19 +190,9 @@ public:
      *
      * @return  The lock state, true if locked.
      */
-    bool is_locked() const
+    bool isLocked() const
     {
         return (lockState & LockState::Locked) != 0;
-    }
-
-    /***************************************************************************
-     * @brief   Returns whether the lock is open via manual override
-     *
-     * @return  True if manually overridden
-     */
-    bool is_manually_overridden() const
-    {
-        return (lockState & LockState::ManuallyOverridden) != 0;
     }
 
     /***************************************************************************
@@ -204,7 +208,7 @@ public:
     /***************************************************************************
      * @brief   Gets the current lock state of the lock
      */
-    LockState get_lock_state() const
+    LockState getLockState() const
     {
         return lockState;
     }
@@ -217,7 +221,7 @@ public:
      * @return  The time since power on that the unlock occurred. Zero if no
      *          unlock data available for the given offset.
      */
-    long get_unlock_time(const int offset = 0) const
+    long getUnlockTime(const int offset = 0) const
     {
         int index = unlockIndex - offset + MAX_UNLOCK_TIMES;
         index = index % MAX_UNLOCK_TIMES;
@@ -276,7 +280,7 @@ private:
     void unlock(const bool manualOverride=false)
     {
         // We only want to record this one first unlock attempt
-        if (is_locked())
+        if (isLocked())
         {
             // Increment first to make obtaining the current index easier.
             unlockIndex = (unlockIndex + 1) % MAX_UNLOCK_TIMES;
