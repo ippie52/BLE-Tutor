@@ -223,17 +223,19 @@ static void logMessageHandler(const bool full)
 static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteristic)
 {
     Serial.print("Message received from: ");
-    Serial.println(central.address());
+    Serial.print(central.address());
 
     char* message = (char *)characteristic.value();
     const int len = characteristic.valueLength();
     message[len] = '\0';
+    Serial.println(String(" \"") + message + "\"");
 
     if (lock.unlockWithMessage(message))
     {
         Serial.println("Valid code received - unlocking");
     }
-    char blank[MAX_PACKET_LENGTH] = {'\0'};
+    char blank[MAX_PACKET_LENGTH];
+    memset(blank, 0, MAX_PACKET_LENGTH);
     characteristic.writeValue(blank);
 }
 

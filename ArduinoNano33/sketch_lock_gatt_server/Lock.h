@@ -134,22 +134,24 @@ public:
     bool unlockWithMessage(const char *message)
     {
         Secret secret = secret_code.read();
-        if ((lockState & LockState::Locked) != 0)
+        if ((lockState & LockState::UpdateSecretCode))
         {
-            if (strcmp(message, secret.code) == 0)
-            {
-                unlock();
-            }
-        }
-        else if ((lockState & LockState::UpdateSecretCode))
-        {
-            memcpy(secret.code, message, strlen(message));
+            const int len = strlen(message);
+            memcpy(secret.code, message, len);
+            secret.code[len] = '\0';
             secret_code.write(secret);
             Serial.println(
                 String("Secret code has been updated to \"") +
                 secret.code +
                 "\""
             );
+        }
+        else if ((lockState & LockState::Locked) != 0)
+        {
+            if (strcmp(message, secret.code) == 0)
+            {
+                unlock();
+            }
         }
         return !isLocked();
     }
@@ -388,7 +390,6 @@ private:
     void updateLockState(const LockState newState)
     {
         lockState = newState;
-        Serial.println(String("New Lock State: ") + lockState);
         if (stateCallback != nullptr)
         {
             stateCallback(lockState);
