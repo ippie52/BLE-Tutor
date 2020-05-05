@@ -33,6 +33,20 @@
 #include "OutputHelper.h"
 
 /**
+ * Pre-compiler options
+ *
+ * Some options below can be turned on/off at compile time to better suit your
+ * usage.
+ */
+
+/// @brief  Set this to zero if you do not wish to use serial with the device.
+///         Serial is useful for debugging and seeing what's going on, however
+///         the set up waits for a serial connection before continuing. If no
+///         serial is connected, it will prevent the device from working as
+///         intended.
+#define USE_SERIAL  (0)
+
+/**
  * Enumerations, structures and constants
  */
 
@@ -185,7 +199,10 @@ static void logMessageHandler(const bool full)
         "Lock is currently %s.",
         (lock ? LOCKED_STRING : UNLOCKED_STRING)
     );
+
+#if USE_SERIAL
     Serial.println(buffer);
+#endif // USE_SERIAL
 
     // NOTE:    Here, we're not sending a long string as by default,
     //          characteristic messages are set to have a maximum length of
@@ -203,8 +220,10 @@ static void logMessageHandler(const bool full)
             {
                 const long delta = millis() - lastUnlock;
                 const float since = delta / 1000.0f;
-                sprintf(buffer, "Unlocked %2.1f seconds ago.", since);
                 sendCharacteristicMessage(logChar, buffer);
+#if USE_SERIAL
+                sprintf(buffer, "Unlocked %2.1f seconds ago.", since);
+#endif // USE_SERIAL
             }
         }
     }
@@ -222,18 +241,22 @@ static void logMessageHandler(const bool full)
  */
 static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteristic)
 {
-    Serial.print("Message received from: ");
-    Serial.print(central.address());
 
     char* message = (char *)characteristic.value();
     const int len = characteristic.valueLength();
     message[len] = '\0';
-    Serial.println(String(" \"") + message + "\"");
+    const bool unlocked = lock.unlockWithMessage(message);
 
-    if (lock.unlockWithMessage(message))
+#if USE_SERIAL
+    Serial.print("Message received from: ");
+    Serial.print(central.address());
+    Serial.println(String(" \"") + message + "\"");
+    if (unlocked)
     {
         Serial.println("Valid code received - unlocking");
     }
+#endif // USE_SERIAL
+
     char blank[MAX_PACKET_LENGTH];
     memset(blank, 0, MAX_PACKET_LENGTH);
     characteristic.writeValue(blank);
@@ -246,9 +269,11 @@ static void unlockMessageWritten(BLEDevice central, BLECharacteristic characteri
  */
 static void connectedHandler(BLEDevice central)
 {
-  Serial.print("Client connected: ");
-  Serial.println(central.address());
-  connectedLed = HIGH;
+#if USE_SERIAL
+    Serial.print("Client connected: ");
+    Serial.println(central.address());
+#endif // USE_SERIAL
+    connectedLed = HIGH;
 }
 
 /*******************************************************************************
@@ -258,9 +283,11 @@ static void connectedHandler(BLEDevice central)
  */
 static void disconnectedHandler(BLEDevice central)
 {
-  Serial.print("Client disconnected: ");
-  Serial.println(central.address());
-  connectedLed = LOW;
+#if USE_SERIAL
+    Serial.print("Client disconnected: ");
+    Serial.println(central.address());
+#endif // USE_SERIAL
+    connectedLed = LOW;
 }
 
 /*******************************************************************************
@@ -271,7 +298,9 @@ static void disconnectedHandler(BLEDevice central)
  */
 static void subscribedCallback(BLEDevice central, BLECharacteristic characteristic)
 {
+#if USE_SERIAL
     Serial.println(String("*** Subscribed by ") + central.address());
+#endif // USE_SERIAL
 }
 
 /*******************************************************************************
@@ -282,7 +311,9 @@ static void subscribedCallback(BLEDevice central, BLECharacteristic characterist
  */
 static void unsubscribedCallback(BLEDevice central, BLECharacteristic characteristic)
 {
+#if USE_SERIAL
     Serial.println(String("*** Unsubscribed by ") + central.address());
+#endif // USE_SERIAL
 }
 
 /*******************************************************************************
@@ -315,10 +346,9 @@ static void lockStateChange(const LockState state)
     }
     else
     {
-        if (Serial)
-        {
-            Serial.println(String("Unknown state:") + state);
-        }
+#if USE_SERIAL
+        Serial.println(String("Unknown state:") + state);
+#endif // USE_SERIAL
     }
 }
 
@@ -327,9 +357,11 @@ static void lockStateChange(const LockState state)
  */
 static void printStartInfo()
 {
+#if USE_SERIAL
     Serial.print("Server stated on: ");
     Serial.println(BLE.address());
     Lock::printStartInfo();
+#endif // USE_SERIAL
 }
 
 /*******************************************************************************
@@ -338,20 +370,25 @@ static void printStartInfo()
  */
 void setup() {
 
+#if USE_SERIAL
     // Start the serial communications, then wait for it to initialise
     Serial.begin(9600);
     while (!Serial)
     {
-        delay(1);
+        delay(100);
+        connectedLed = !connectedLed;
     }
-
     Serial.println("Starting the peripheral server.");
 
+#endif // USE_SERIAL
 
     // BLE related set up code
     if (!BLE.begin())
     {
-        Serial.println("Failed to start BLE");
+        if (Serial)
+        {
+            Serial.println("Failed to start BLE");
+        }
         while (true)
         {
             delay(100);
@@ -393,7 +430,9 @@ void setup() {
     logChar.writeValue("No log yet.");
 
     // Display any start up information
+#if USE_SERIAL
     printStartInfo();
+#endif // USE_SERIAL
 }
 
 /*******************************************************************************

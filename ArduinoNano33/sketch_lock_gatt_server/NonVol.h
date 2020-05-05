@@ -78,7 +78,6 @@ public:
     void operator() (T value)
     {
         this->value = value;
-        Serial.println("Write Functor");
         EEPROM.put(address, value);
     }
 

@@ -140,11 +140,14 @@ public:
             memcpy(secret.code, message, len);
             secret.code[len] = '\0';
             secret_code.write(secret);
-            Serial.println(
-                String("Secret code has been updated to \"") +
-                secret.code +
-                "\""
-            );
+            if (Serial)
+            {
+                Serial.println(
+                    String("Secret code has been updated to \"") +
+                    secret.code +
+                    "\""
+                );
+            }
         }
         else if ((lockState & LockState::Locked) != 0)
         {
@@ -161,7 +164,6 @@ public:
      */
     void lock()
     {
-        Serial.println("Locking.");
         lastUnlocked = 0;
         unlockedLed = LOW;
         lockedLed = HIGH;
@@ -245,10 +247,13 @@ public:
         Secret secret = secret_code.read();
         if (strlen(secret.code) == 0)
         {
-            Serial.println(
-                String("Secret code not found - Setting default: ") +
-                DEFAULT_SECRET_CODE
-            );
+            if (Serial)
+            {
+                Serial.println(
+                    String("Secret code not found - Setting default: ") +
+                    DEFAULT_SECRET_CODE
+                );
+            }
             sprintf(secret.code, DEFAULT_SECRET_CODE);
             secret_code.write(secret);
         }
@@ -259,16 +264,19 @@ public:
      */
     static void printStartInfo()
     {
-        Serial.print("Secret code to unlock remotely: \"");
-        Secret secret = secret_code.read();
-        Serial.print(secret.code);
-        Serial.println("\"");
+        if (Serial)
+        {
+            Serial.print("Secret code to unlock remotely: \"");
+            Secret secret = secret_code.read();
+            Serial.print(secret.code);
+            Serial.println("\"");
 
-        Serial.println("To update the secret code:");
-        Serial.println("1. Connect to the device via Bluetooth.");
-        Serial.println("2. Press and hold the log button until the lock LED flashes.");
-        Serial.println("3. When the LED stops flashing, write the new value.");
-        Serial.println("4. Await status confirmation.");
+            Serial.println("To update the secret code:");
+            Serial.println("1. Connect to the device via Bluetooth.");
+            Serial.println("2. Press and hold the log button until the lock LED flashes.");
+            Serial.println("3. When the LED stops flashing, write the new value.");
+            Serial.println("4. Await status confirmation.");
+        }
     }
 
 private:
@@ -288,8 +296,6 @@ private:
             unlockIndex = (unlockIndex + 1) % MAX_UNLOCK_TIMES;
             unlockTimes[unlockIndex] = millis();
         }
-
-        Serial.println("Unlocking.");
         lastUnlocked = millis();
         unlockedLed = HIGH;
         lockedLed = LOW;
@@ -308,13 +314,11 @@ private:
     {
         if (state)
         {
-            Serial.println("Manual override triggered.");
             unlock(true);
         }
         else
         {
             // Don't lock immediately, allow the delay
-            Serial.println("Manual override ended. Lock will be closed after delay.");
             lastUnlocked = millis();
         }
     }
@@ -330,8 +334,6 @@ private:
     {
         // If the button is pressed for more than this time, a full log is sent,
         // line by line.
-        Serial.print("Log button has been ");
-        Serial.println(state ? "pressed." : "released.");
         if (!state)
         {
             if (durationMs >= SECRET_CODE_DELAY_MS)
@@ -375,10 +377,6 @@ private:
             }
             lockedLed = originalState;
             updateLockState((LockState)(LockState::UpdateSecretCode | lockState));
-        }
-        else
-        {
-            Serial.println("The expected duration has not been met.");
         }
     }
 
